@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Littlepay Checkout SDK v2 - MIT registerCard Demo</title>
+    <title>Multi-PSP Checkout Demo (Littlepay & Moneris)</title>
     <link rel="stylesheet" href="style.css">
     <!-- Google Fonts for Rubik and Roboto -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,8 +15,8 @@
         <div class="container header-container">
             <div class="logo">
                 <span class="logo-symbol">💳</span>
-                <span class="logo-text">littlepay</span>
-                <span class="badge">SDK v2 MIT Demo</span>
+                <span class="logo-text">Payment Gateway Demo</span>
+                <span class="badge" id="psp-badge">Littlepay & Moneris</span>
             </div>
             <nav class="header-nav">
                 <span class="status-indicator">
@@ -31,16 +31,24 @@
         <!-- Configuration Section -->
         <section class="config-panel card">
             <div class="card-header">
-                <h2 class="section-title">1. SDK Configuration</h2>
-                <p class="section-subtitle">Configure the token and layout settings for the drop-in UI.</p>
+                <h2 class="section-title">1. Checkout Configuration</h2>
+                <p class="section-subtitle">Select your Payment Service Provider (PSP) and configure checkout settings.</p>
             </div>
             
             <form id="sdk-config-form">
                 <div class="form-group">
+                    <label for="pspProvider">Payment Service Provider (PSP)</label>
+                    <select id="pspProvider">
+                        <option value="littlepay" selected>Littlepay</option>
+                        <option value="moneris">Moneris</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="checkout-method-group">
                     <label for="checkoutMethod">Checkout Method</label>
                     <select id="checkoutMethod">
-                        <option value="sdk" selected>Littlepay Drop-in SDK (Inline)</option>
-                        <option value="link">Payment Link (Hosted Checkout)</option>
+                        <option value="sdk" selected>Inline Drop-in SDK</option>
+                        <option value="link">Payment Link / Hosted Redirection</option>
                     </select>
                 </div>
 
@@ -90,7 +98,7 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group" id="mit-type-group">
                         <label for="mitType">MIT Registration Type</label>
                         <select id="mitType">
                             <option value="">-- None (General CIT / No MIT Registration) --</option>
@@ -102,98 +110,98 @@
                     </div>
                 </div>
 
-
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="locale">Locale</label>
-                        <select id="locale">
-                            <option value="en-GB" selected>English (UK) - en-GB</option>
-                            <option value="fr-FR">French (France) - fr-FR</option>
-                            <option value="fr-CA">French (Canada) - fr-CA</option>
-                            <option value="de-DE">German (Germany) - de-DE</option>
-                            <option value="it-IT">Italian (Italy) - it-IT</option>
-                            <option value="pl-PL">Polish (Poland) - pl-PL</option>
-                            <option value="es-419">Spanish (Latin America) - es-419</option>
-                            <option value="cy-GB">Welsh (UK) - cy-GB</option>
-                            <option value="hu-HU">Hungarian (Hungary) - hu-HU</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="labelPosition">Label Position</label>
-                        <select id="labelPosition">
-                            <option value="floating" selected>Floating labels</option>
-                            <option value="top">Top fixed labels</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="cardholderDetailFields">Cardholder Extra Fields</label>
-                        <select id="cardholderDetailFields">
-                            <option value="HIDE" selected>Hide (Default)</option>
-                            <option value="DISPLAY">Display (Phone/Email)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="disableSavedCards">Disable Saved Cards</label>
-                        <select id="disableSavedCards">
-                            <option value="false" selected>No (Allow saved)</option>
-                            <option value="true">Yes (Guest checkout)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <details class="theme-customizer">
-                    <summary class="theme-summary">
-                        <span>🎨 Custom Theme & Typography</span>
-                        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </summary>
-                    <div class="theme-grid">
+                <div id="littlepay-settings-container">
+                    <div class="form-row">
                         <div class="form-group">
-                            <label for="primaryColor">Main Text Color</label>
-                            <div class="color-picker-wrapper">
-                                <input type="color" id="primaryColor" value="#2d3748">
-                                <span class="color-value">#2D3748</span>
-                            </div>
+                            <label for="locale">Locale</label>
+                            <select id="locale">
+                                <option value="en-GB" selected>English (UK) - en-GB</option>
+                                <option value="fr-FR">French (France) - fr-FR</option>
+                                <option value="fr-CA">French (Canada) - fr-CA</option>
+                                <option value="de-DE">German (Germany) - de-DE</option>
+                                <option value="it-IT">Italian (Italy) - it-IT</option>
+                                <option value="pl-PL">Polish (Poland) - pl-PL</option>
+                                <option value="es-419">Spanish (Latin America) - es-419</option>
+                                <option value="cy-GB">Welsh (UK) - cy-GB</option>
+                                <option value="hu-HU">Hungarian (Hungary) - hu-HU</option>
+                            </select>
                         </div>
+
                         <div class="form-group">
-                            <label for="bgColor">Main Background</label>
-                            <div class="color-picker-wrapper">
-                                <input type="color" id="bgColor" value="#ffffff">
-                                <span class="color-value">#FFFFFF</span>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="buttonBg">Button Background</label>
-                            <div class="color-picker-wrapper">
-                                <input type="color" id="buttonBg" value="#ed7625">
-                                <span class="color-value">#ED7625</span>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="buttonColor">Button Text</label>
-                            <div class="color-picker-wrapper">
-                                <input type="color" id="buttonColor" value="#ffffff">
-                                <span class="color-value">#FFFFFF</span>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="borderRadius">Button Border Radius</label>
-                            <input type="text" id="borderRadius" value="6px" placeholder="e.g. 6px">
-                        </div>
-                        <div class="form-group">
-                            <label for="fontFamily">Font Family</label>
-                            <select id="fontFamily">
-                                <option value="Rubik, sans-serif" selected>Rubik</option>
-                                <option value="Source Sans 3, sans-serif">Source Sans 3</option>
-                                <option value="system-ui, sans-serif">System Default</option>
+                            <label for="labelPosition">Label Position</label>
+                            <select id="labelPosition">
+                                <option value="floating" selected>Floating labels</option>
+                                <option value="top">Top fixed labels</option>
                             </select>
                         </div>
                     </div>
-                </details>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cardholderDetailFields">Cardholder Extra Fields</label>
+                            <select id="cardholderDetailFields">
+                                <option value="HIDE" selected>Hide (Default)</option>
+                                <option value="DISPLAY">Display (Phone/Email)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="disableSavedCards">Disable Saved Cards</label>
+                            <select id="disableSavedCards">
+                                <option value="false" selected>No (Allow saved)</option>
+                                <option value="true">Yes (Guest checkout)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <details class="theme-customizer">
+                        <summary class="theme-summary">
+                            <span>🎨 Custom Theme & Typography</span>
+                            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </summary>
+                        <div class="theme-grid">
+                            <div class="form-group">
+                                <label for="primaryColor">Main Text Color</label>
+                                <div class="color-picker-wrapper">
+                                    <input type="color" id="primaryColor" value="#2d3748">
+                                    <span class="color-value">#2D3748</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="bgColor">Main Background</label>
+                                <div class="color-picker-wrapper">
+                                    <input type="color" id="bgColor" value="#ffffff">
+                                    <span class="color-value">#FFFFFF</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="buttonBg">Button Background</label>
+                                <div class="color-picker-wrapper">
+                                    <input type="color" id="buttonBg" value="#ed7625">
+                                    <span class="color-value">#ED7625</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="buttonColor">Button Text</label>
+                                <div class="color-picker-wrapper">
+                                    <input type="color" id="buttonColor" value="#ffffff">
+                                    <span class="color-value">#FFFFFF</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="borderRadius">Button Border Radius</label>
+                                <input type="text" id="borderRadius" value="6px" placeholder="e.g. 6px">
+                            </div>
+                            <div class="form-group">
+                                <label for="fontFamily">Font Family</label>
+                                <select id="fontFamily">
+                                    <option value="Rubik, sans-serif" selected>Rubik</option>
+                                    <option value="Source Sans 3, sans-serif">Source Sans 3</option>
+                                    <option value="system-ui, sans-serif">System Default</option>
+                                </select>
+                            </div>
+                        </div>
+                    </details>
+                </div>
 
                 <div class="form-actions">
                     <button type="submit" id="btn-submit" class="btn btn-primary">Generate Token & Register Card</button>
@@ -222,6 +230,9 @@
 
                     <!-- Target element where Littlepay will mount -->
                     <div id="littlepay-dropin-ui" class="hidden"></div>
+
+                    <!-- Target element where Moneris will mount -->
+                    <div id="moneris-checkout-ui" class="hidden" style="min-height: 400px; width: 100%;"></div>
                 </div>
             </div>
 
@@ -240,12 +251,14 @@
 
     <footer class="app-footer">
         <div class="container footer-container">
-            <p>&copy; 2026 Littlepay Checkout SDK MIT Demo. For developer sandbox usage only.</p>
+            <p>&copy; 2026 Payment Gateway Demo. For developer sandbox usage only.</p>
         </div>
     </footer>
 
     <!-- Littlepay Checkout JS SDK v2 Sandbox -->
     <script src="https://static.checkout.sandbox.littlepay.com/littlepay-checkout-v2.min.js"></script>
+    <!-- Moneris Checkout JS SDK Sandbox -->
+    <script src="https://gatewayt.moneris.com/chktv2/js/chkt_v2.00.js"></script>
     <script src="app.js?v=2"></script>
 </body>
 </html>

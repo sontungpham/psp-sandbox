@@ -93,7 +93,96 @@ const server = http.createServer((req, res) => {
 
         req.on('end', async () => {
             try {
-                const { mitType, orderPayload, checkoutMethod, disableSavedCards, locale } = JSON.parse(body);
+                const { psp, mitType, orderPayload, checkoutMethod, disableSavedCards, locale } = JSON.parse(body);
+
+                // ==========================================
+                // ROUTE PSP: MONERIS
+                // ==========================================
+                if (psp === 'moneris') {
+                    const storeId = (process.env.MONERIS_STORE_ID || '').trim();
+                    const apiToken = (process.env.MONERIS_API_TOKEN || '').trim();
+                    const checkoutId = (process.env.MONERIS_CHECKOUT_ID || '').trim();
+                    const envMode = (process.env.MONERIS_ENV || 'qa').trim().toLowerCase();
+
+                    if (!storeId || storeId === 'FILLME' || !apiToken || apiToken === 'FILLME') {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'MONERIS_STORE_ID or MONERIS_API_TOKEN is not configured or set to FILLME. Please check your env.local.json file.' }));
+                        return;
+                    }
+
+                    if (!checkoutId || checkoutId === 'FILLME') {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'MONERIS_CHECKOUT_ID is not configured or set to FILLME. Please configure MONERIS_CHECKOUT_ID in your env.local.json file.' }));
+                        return;
+                    }
+
+                    const chargeAmount = orderPayload && orderPayload.charge ? (orderPayload.charge.amount / 100).toFixed(2) : '10.00';
+                    const orderNo = `ORDER-${Date.now()}`;
+
+                    const mcoUrl = envMode === 'prod'
+                        ? 'https://gateway.moneris.com/chktv2/request/request.php'
+                        : 'https://gatewayt.moneris.com/chktv2/request/request.php';
+
+                    // Moneris Checkout (MCO) Inline SDK Preload Flow
+                    console.log(`[Proxy Moneris] Initiating MCO Preload for Store: ${storeId}, Order: ${orderNo}, Amount: ${chargeAmount}, Env: ${envMode} (${mcoUrl})...`);
+
+                    const preloadPayload = {
+                        store_id: storeId,
+                        api_token: apiToken,
+                        checkout_id: checkoutId,
+                        environment: envMode,
+                        action: 'preload',
+                        txn_total: chargeAmount,
+                        order_no: orderNo
+                    };
+
+                    if (orderPayload && orderPayload.customer_ref) {
+                        preloadPayload.cust_id = String(orderPayload.customer_ref);
+                    }
+
+                    const mcoRes = await makeHttpsRequest(
+                        mcoUrl,
+                        'POST',
+                        {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        JSON.stringify(preloadPayload)
+                    );
+
+                    console.log(`[Proxy Moneris] MCO Preload Response (${mcoRes.statusCode}):`, mcoRes.body);
+
+                    let parsedData;
+                    try {
+                        parsedData = JSON.parse(mcoRes.body);
+                    } catch (e) {
+                        parsedData = null;
+                    }
+
+                    if (parsedData && parsedData.response && parsedData.response.ticket) {
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({
+                            psp: 'moneris',
+                            checkoutMethod: 'sdk',
+                            ticket: parsedData.response.ticket,
+                            environment: envMode,
+                            order_no: orderNo
+                        }));
+                    } else {
+                        const errDetail = parsedData && parsedData.response && parsedData.response.error
+                            ? `${parsedData.response.error.field}: ${parsedData.response.error.message}`
+                            : mcoRes.body;
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({
+                            error: `Moneris Checkout preload failed (${errDetail}). Please verify your MONERIS_STORE_ID, MONERIS_API_TOKEN, MONERIS_CHECKOUT_ID, and MONERIS_ENV.`
+                        }));
+                    }
+                    return;
+                }
+
+                // ==========================================
+                // ROUTE PSP: LITTLEPAY (Default)
+                // ==========================================
                 const apiKey = process.env.LITTLEPAY_API_KEY;
 
                 if (!apiKey) {
@@ -264,6 +353,63 @@ const server = http.createServer((req, res) => {
                 console.error('[Proxy Error] Core failure:', err);
                 res.writeHead(500, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: `Local proxy core failure: ${err.message}` }));
+            }
+        });
+        return;
+    }
+
+    // Route: Moneris Receipt Verification Endpoint
+    if (req.method === 'POST' && pathname === '/api/moneris-receipt') {
+        let body = '';
+        req.on('data', chunk => {
+            body += chunk;
+        });
+
+        req.on('end', async () => {
+            try {
+                const { ticket } = JSON.parse(body);
+                const storeId = process.env.MONERIS_STORE_ID;
+                const apiToken = process.env.MONERIS_API_TOKEN;
+                const checkoutId = process.env.MONERIS_CHECKOUT_ID;
+                const envMode = process.env.MONERIS_ENV || 'qa';
+
+                if (!checkoutId || checkoutId === 'FILLME') {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'MONERIS_CHECKOUT_ID is not configured or set to FILLME. Please configure MONERIS_CHECKOUT_ID in your env.local.json file.' }));
+                    return;
+                }
+
+                const mcoUrl = envMode === 'prod'
+                    ? 'https://gateway.moneris.com/chktv2/request/request.php'
+                    : 'https://gatewayt.moneris.com/chktv2/request/request.php';
+
+                const receiptPayload = {
+                    store_id: storeId,
+                    api_token: apiToken,
+                    checkout_id: checkoutId,
+                    ticket: ticket,
+                    environment: envMode,
+                    action: 'receipt'
+                };
+
+                const receiptRes = await makeHttpsRequest(
+                    mcoUrl,
+                    'POST',
+                    {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    JSON.stringify(receiptPayload)
+                );
+
+                console.log(`[Proxy Moneris] Receipt Verification Response (${receiptRes.statusCode}):`, receiptRes.body);
+                res.writeHead(receiptRes.statusCode, { 'Content-Type': 'application/json' });
+                res.end(receiptRes.body);
+
+            } catch (err) {
+                console.error('[Proxy Moneris Error] Receipt verification error:', err);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: err.message }));
             }
         });
         return;
