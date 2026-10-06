@@ -29,6 +29,65 @@ The application includes a zero-dependency local Node.js proxy server that reads
 
 ---
 
+## 🧩 Extensible PSP Architecture
+
+The project uses a declarative registry pattern for supported PSPs, decoupling provider configurations from core UI and proxy logic:
+
+1. **Frontend Registry (`app.js` -> `SUPPORTED_PSPS`)**:
+   - Each PSP defines its identifier, display name, header badge, default currency, supported checkout methods (`sdk`, `link`), UI feature toggles (`mitType`, `customSettings`, `checkoutMethod`), DOM container ID, UI labels, SDK verification check, cleanup teardown, and mounting logic.
+   - The dropdown and form fields adapt automatically based on the active PSP's capabilities without hardcoded conditionals.
+
+2. **Backend Handler Registry (`server.js` -> `PSP_HANDLERS`)**:
+   - Each PSP defines an async session creation handler (`handle<Psp>Session`) registered in `PSP_HANDLERS`.
+   - The `/api/create-session` proxy dynamically routes requests to the requested PSP handler.
+
+### ➕ How to Add a New PSP
+
+Adding a new PSP requires only two simple steps:
+
+1. **Frontend (`app.js`)**: Add your PSP entry to `SUPPORTED_PSPS`:
+   ```javascript
+   new_psp: {
+       id: 'new_psp',
+       name: 'New PSP',
+       badge: 'New PSP Gateway',
+       defaultCurrency: 'USD',
+       defaultMethod: 'sdk',
+       supportedMethods: [{ id: 'sdk', label: 'Inline Drop-in SDK' }],
+       features: { checkoutMethod: false, mitType: false, customSettings: false },
+       containerId: 'new-psp-checkout-ui',
+       buttonText: { sdk: 'Initialize New PSP Checkout' },
+       previewTexts: {
+           sdk: {
+               title: '2. New PSP Checkout UI',
+               subtitle: 'Secure drop-in rendered by New PSP SDK.',
+               placeholderTitle: 'Ready to Initialize',
+               placeholderText: 'Click initialize to start checkout.'
+           }
+       },
+       checkSdkAvailable: () => typeof window.NewPspSdk !== 'undefined',
+       cleanup: () => { /* unmount active instance */ },
+       mount: async (sessionData, context) => { /* mount SDK or redirect */ }
+   }
+   ```
+
+2. **Backend (`server.js`)**: Implement session creation logic and register it in `PSP_HANDLERS`:
+   ```javascript
+   async function handleNewPspSession(sessionParams, res) {
+       // Call PSP API to initialize payment intent/order/session
+       res.writeHead(200, { 'Content-Type': 'application/json' });
+       res.end(JSON.stringify({ psp: 'new_psp', client_token: '...' }));
+   }
+
+   const PSP_HANDLERS = {
+       littlepay: handleLittlepaySession,
+       moneris: handleMonerisSession,
+       new_psp: handleNewPspSession
+   };
+   ```
+
+---
+
 ## 📁 File Structure
 
 - `index.html`: Scaffolds the dual-column playground workspace, PSP selector, and mount wrappers.
